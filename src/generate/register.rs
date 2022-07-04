@@ -638,7 +638,7 @@ pub fn fields(
             };
 
             let new_pc_aw = Ident::new(&(name_pc.clone() + "_AW"), span);
-            let name_pc_w = Ident::new(&(name_pc.clone() + "_W"), span);
+            let mut name_pc_w = Ident::new(&(name_pc.clone() + "_W"), span);
 
             let mut proxy_items = TokenStream::new();
             let mut unsafety = unsafety(f.write_constraint.as_ref(), width);
@@ -670,7 +670,7 @@ pub fn fields(
                         let pc = util::replace_suffix(base.field, "");
                         let pc = pc.to_sanitized_upper_case();
                         let base_pc_w = Ident::new(&(pc + "_W"), span);
-                        derive_from_base(mod_items, &base, &name_pc_w, &base_pc_w, &writerdoc);
+                        name_pc_w = base_pc_w;
                         derived = true;
                     }
                     _ => {
@@ -1128,6 +1128,12 @@ fn lookup_in_field<'f>(
     field: &'f Field,
 ) -> Result<(&'f EnumeratedValues, Option<Base<'f>>)> {
     for evs in &field.enumerated_values {
+        if evs.derived_from().is_some() {
+            return Err(anyhow!(
+                "Found nested enumeratedValues derive in {}. Not supported",
+                field.name
+            ));
+        }
         if evs.name.as_deref() == Some(base_evs) {
             return Ok((
                 evs,
